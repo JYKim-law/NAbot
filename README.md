@@ -18,6 +18,20 @@ Python 3.10+ 및 아래 패키지 필요:
 pip install fastapi uvicorn requests beautifulsoup4 lxml streamlit openpyxl
 ```
 
+## API 키 발급
+
+열린국회정보 Open API 키가 필요하다. https://open.assembly.go.kr 에서 무료 발급.
+
+발급 후 환경변수로 설정:
+
+```bash
+# Windows
+set ASSEMBLY_API_KEY=발급받은키
+
+# Mac/Linux
+export ASSEMBLY_API_KEY=발급받은키
+```
+
 ## 실행 방법
 
 터미널 두 개를 열고 각각 실행:
@@ -46,5 +60,4 @@ hwpx_utils.py        hwpx 템플릿 {{플레이스홀더}} 치환 유틸리티
 - `(수정하지마시오)재료파일(web).hwpx` 파일을 수정하면 출력물이 깨질 수 있다.
 - 신구조문대비표(대비표)는 `.hwp` OLE 바이너리 한계로 자동 삽입 불가.
   ZIP에 포함된 의안원문 파일에서 수동으로 복사·붙여넣기 필요.
-- 열린국회정보 API 키가 코드에 내장되어 있으며, 개인 키로 교체를 권장한다.
-  발급: https://open.assembly.go.kr
+- 열린국회정보 API 키는 환경변수 `ASSEMBLY_API_KEY`로 주입해야 한다. 위 설정 참고.

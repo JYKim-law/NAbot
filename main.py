@@ -28,7 +28,7 @@ TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "(수정하지마시오)
 API_BASE = "https://open.assembly.go.kr/portal/openapi/"
 BILL_PAGE_BASE = "https://pal.assembly.go.kr/napal/lgsltpa/lgsltpaDone/view.do?lgsltPaId="
 FILE_GATE = "https://likms.assembly.go.kr/filegate/servlet/FileGate?bookId="
-API_KEY = "?KEY=7257fcd176844b06bbb0996e3b02a5c1"
+API_KEY = "?KEY=" + os.environ.get("ASSEMBLY_API_KEY", "")
 
 
 class Options(BaseModel):
