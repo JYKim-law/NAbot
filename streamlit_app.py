@@ -54,14 +54,14 @@ with tab1:
     with col_text:
         raw_text_g = st.text_area(
             "직접 입력 (한 줄에 하나씩)",
-            placeholder="2100001\n2100002",
+            placeholder="2212345\n2212346",
             height=130,
             key="g_text",
         )
 
     with col_excel:
         uploaded_g = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="g_excel")
-        st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
+        st.caption("첫 열에 의안번호만 세로로 입력된 엑셀 파일을 사용하세요")
         st.download_button(
             "예시 엑셀 파일 다운로드",
             data=_sample_xlsx,
@@ -79,7 +79,7 @@ with tab1:
         cha        = st.text_input("제 N 차 위원회", value="1")
     with col2:
         chief_type = st.radio("직책", ["수석전문위원", "전문위원"], horizontal=True)
-        chief_name = st.text_input("성함", value="ㅁㅁㅁ")
+        chief_name = st.text_input("성함", value="홍길동")
         tel_ext    = st.text_input("내선번호 (02-6788-XXXX)", value="5000")
 
     st.subheader("3. 실행")
@@ -136,14 +136,14 @@ with tab2:
     with col_text2:
         raw_text_r = st.text_area(
             "직접 입력 (한 줄에 하나씩)",
-            placeholder="2100001\n2100002",
+            placeholder="2212345\n2212346",
             height=130,
             key="r_text",
         )
 
     with col_excel2:
         uploaded_r = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="r_excel")
-        st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
+        st.caption("첫 열에 의안번호만 세로로 입력된 엑셀 파일을 사용하세요")
         st.download_button(
             "예시 엑셀 파일 다운로드",
             data=_sample_xlsx,
