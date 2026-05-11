@@ -24,8 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "(수정하지마시오)재료파일(web).hwpx")
-REPORT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "국회bot_심사보고서재료(웹서비스).hwpx")
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "재료파일_검토보고서.hwpx")
+REPORT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "재료파일_심사보고서.hwpx")
 API_BASE = "https://open.assembly.go.kr/portal/openapi/"
 BILL_PAGE_BASE = "https://pal.assembly.go.kr/napal/lgsltpa/lgsltpaDone/view.do?lgsltPaId="
 FILE_GATE = "https://likms.assembly.go.kr/filegate/servlet/FileGate?bookId="
