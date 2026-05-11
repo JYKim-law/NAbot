@@ -37,7 +37,7 @@ class Options(BaseModel):
     hoe_gu: str = "임시회"       # 임시회 / 정기회
     cha: str = "1"              # 제 N 차 위원회
     chief_type: str = "수석전문위원"  # 수석전문위원 / 전문위원
-    chief_name: str = "ㅁㅁㅁ"
+    chief_name: str = "홍길동"
     tel_ext: str = "5000"       # 02-6788-XXXX
 
 
