@@ -63,7 +63,7 @@ with tab1:
         uploaded_g = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="g_excel")
         st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
         st.download_button(
-            "예시 파일 다운로드",
+            "예시 엑셀 파일 다운로드",
             data=_sample_xlsx,
             file_name="의안번호입력시트.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -145,7 +145,7 @@ with tab2:
         uploaded_r = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="r_excel")
         st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
         st.download_button(
-            "예시 파일 다운로드",
+            "예시 엑셀 파일 다운로드",
             data=_sample_xlsx,
             file_name="의안번호입력시트.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
