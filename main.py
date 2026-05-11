@@ -227,20 +227,18 @@ def process_bill_report(bill_number: str) -> tuple[bytes, str]:
     dates_list   = [t.text.strip() for t in soup2.find_all("JRCMIT_CONF_DT")]
     results_list = [t.text.strip() for t in soup2.find_all("JRCMIT_CONF_RSLT")]
 
-    # ── 3. BPMBILLSUMMARY API: 제안이유 및 주요내용 ─────────────────
-    url3 = f"{API_BASE}BPMBILLSUMMARY/{API_KEY}&Type=xml&pIndex=1&BILL_NO={str_no}"
-    resp3 = requests.get(url3, timeout=10)
-    soup3 = BeautifulSoup(resp3.text, "xml")
-
+    # ── 3. 입법예고 페이지: 제안이유 및 주요내용 ───────────────────────
+    resp_page = requests.get(BILL_PAGE_BASE + bill_id, timeout=10)
+    soup_page = BeautifulSoup(resp_page.text, "html.parser")
     try:
-        summary_tag = soup3.find("SUMMARY")
-        summary = summary_tag.text.strip() if summary_tag else ""
+        summary = soup_page.select_one("div.desc").text.strip()
         summary = (
             summary.replace("？", "·")
                    .replace("\x00", "")
-                   .replace("\n\n", "\n")
-                   .replace("\n", "\r\n")
+                   .replace("\r\n", "\n")
+                   .replace("\r", "\n")
         )
+        summary = re.sub(r"\n{3,}", "\n\n", summary)
     except Exception:
         summary = ""
 
