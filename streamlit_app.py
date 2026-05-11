@@ -79,13 +79,13 @@ with tab1:
     st.subheader("2. 옵션 입력")
     col1, col2 = st.columns(2)
     with col1:
-        hoe_cha    = st.text_input("제 N 회국회", placeholder="예: 430")
+        hoe_cha    = st.text_input("제 N 회국회", value="400", placeholder="400")
         hoe_gu     = st.radio("회기 구분", ["임시회", "정기회"], horizontal=True)
-        cha        = st.text_input("제 N 차 위원회", placeholder="예: 1")
+        cha        = st.text_input("제 N 차 위원회", value="1", placeholder="1")
     with col2:
         chief_type = st.radio("수석/전문위원 구분", ["수석전문위원", "전문위원"], horizontal=True)
-        chief_name = st.text_input("성함", placeholder="예: 홍길동")
-        tel_ext    = st.text_input("내선번호 (02-6788-XXXX)", placeholder="예: 5000")
+        chief_name = st.text_input("성함", value="홍길동", placeholder="홍길동")
+        tel_ext    = st.text_input("내선번호 (02-6788-XXXX)", value="0000", placeholder="0000")
 
     st.subheader("3. 실행")
     if st.button("검토보고서 생성", type="primary", use_container_width=True):
