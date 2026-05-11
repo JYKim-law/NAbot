@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import streamlit as st
 import requests
 import openpyxl
@@ -40,6 +41,9 @@ def collect_numbers(raw_text, uploaded) -> list[str]:
     return result
 
 
+with open(os.path.join(os.path.dirname(__file__), "의안번호입력시트.xlsx"), "rb") as _f:
+    _sample_xlsx = _f.read()
+
 tab1, tab2 = st.tabs(["검토보고서", "심사보고서"])
 
 # ── 검토보고서 탭 ──────────────────────────────────────────────────
@@ -58,6 +62,14 @@ with tab1:
     with col_excel:
         uploaded_g = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="g_excel")
         st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
+        st.download_button(
+            "예시 파일 다운로드",
+            data=_sample_xlsx,
+            file_name="의안번호입력시트.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="g_sample",
+        )
 
     st.subheader("2. 옵션 입력")
     col1, col2 = st.columns(2)
@@ -132,6 +144,14 @@ with tab2:
     with col_excel2:
         uploaded_r = st.file_uploader("엑셀 파일 업로드 (.xlsx)", type=["xlsx"], key="r_excel")
         st.caption("첫 번째 컬럼에 의안번호만 세로로 입력된 파일을 사용하세요.")
+        st.download_button(
+            "예시 파일 다운로드",
+            data=_sample_xlsx,
+            file_name="의안번호입력시트.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="r_sample",
+        )
 
     st.subheader("2. 실행")
     if st.button("심사보고서 생성", type="primary", use_container_width=True):
