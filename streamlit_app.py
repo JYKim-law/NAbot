@@ -6,6 +6,11 @@ import openpyxl
 
 st.set_page_config(page_title="국회bot", page_icon="🏛", layout="centered")
 st.title("국회bot")
+st.caption("국회 상임위 검토보고서 / 심사보고서 작성 자동화")
+st.markdown(
+    "[GitHub](https://github.com/JYKim-law/NAbot) · "
+    "[소개 페이지](https://sites.google.com/view/jaeyoon-kim/nabot)"
+)
 
 API_URL = "http://localhost:8000"
 
