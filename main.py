@@ -25,6 +25,7 @@ app.add_middleware(
 )
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "(수정하지마시오)재료파일(web).hwpx")
+REPORT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "국회bot_심사보고서재료(웹서비스).hwpx")
 API_BASE = "https://open.assembly.go.kr/portal/openapi/"
 BILL_PAGE_BASE = "https://pal.assembly.go.kr/napal/lgsltpa/lgsltpaDone/view.do?lgsltPaId="
 FILE_GATE = "https://likms.assembly.go.kr/filegate/servlet/FileGate?bookId="
@@ -185,6 +186,87 @@ def process_bill(bill_number: str, opts: Options) -> tuple[bytes, bytes | None, 
     return hwpx_bytes, hwp_bytes, bill_name
 
 
+def _format_judge_history(names: list, dates: list, results: list) -> str:
+    """BILLJUDGECONF API 결과 → 심사경과 텍스트."""
+    lines = []
+    for name, date, result in zip(names, dates, results):
+        try:
+            y, m, d = date.split("-")
+            formatted = f"{int(y)}. {int(m)}. {int(d)}."
+        except Exception:
+            formatted = date
+        lines.append(f"{name}({formatted}) - {result}")
+    return "\n".join(lines)
+
+
+class ReportRequest(BaseModel):
+    bill_numbers: list[str]
+
+
+def process_bill_report(bill_number: str) -> tuple[bytes, str]:
+    """의안번호 하나를 처리하여 (심사보고서 hwpx, 법안명) 반환."""
+    str_no = str(bill_number)
+    short_no = str_no[2:].lstrip("0")
+
+    # ── 1. ALLBILL API: 기본정보 ────────────────────────────────────
+    url = f"{API_BASE}ALLBILL/{API_KEY}&AGE={short_no}&BILL_NO={str_no}"
+    resp = requests.get(url, timeout=10)
+    soup = BeautifulSoup(resp.text, "xml")
+
+    bill_name = soup.find("BILL_NM").text
+    proposer  = soup.find("PPSR_NM").text
+    comm_han  = soup.find("JRCMIT_NM").text
+    bill_id   = soup.find("BILL_ID").text
+
+    # ── 2. BILLJUDGECONF API: 위원회 심사 이력 ──────────────────────
+    url2 = f"{API_BASE}BILLJUDGECONF/{API_KEY}&Type=xml&pIndex=1&BILL_ID={bill_id}"
+    resp2 = requests.get(url2, timeout=10)
+    soup2 = BeautifulSoup(resp2.text, "xml")
+
+    names_list   = [t.text.strip() for t in soup2.find_all("JRCMIT_CONF_NM")]
+    dates_list   = [t.text.strip() for t in soup2.find_all("JRCMIT_CONF_DT")]
+    results_list = [t.text.strip() for t in soup2.find_all("JRCMIT_CONF_RSLT")]
+
+    # ── 3. BPMBILLSUMMARY API: 제안이유 및 주요내용 ─────────────────
+    url3 = f"{API_BASE}BPMBILLSUMMARY/{API_KEY}&Type=xml&pIndex=1&BILL_NO={str_no}"
+    resp3 = requests.get(url3, timeout=10)
+    soup3 = BeautifulSoup(resp3.text, "xml")
+
+    try:
+        summary_tag = soup3.find("SUMMARY")
+        summary = summary_tag.text.strip() if summary_tag else ""
+        summary = (
+            summary.replace("？", "·")
+                   .replace("\x00", "")
+                   .replace("\n\n", "\n")
+                   .replace("\n", "\r\n")
+        )
+    except Exception:
+        summary = ""
+
+    today = datetime.datetime.today()
+
+    fields = {
+        "{{법안명}}":         bill_name,
+        "{{연월}}":           f"{today.year}. {today.month}.",
+        "{{위원회명}}":       comm_han,
+        "{{심사경과}}":       _format_judge_history(names_list, dates_list, results_list),
+        "{{proposer}}":       proposer.split(" ")[0],
+        "{{제안설명의요지}}": summary,
+    }
+
+    with tempfile.NamedTemporaryFile(suffix=".hwpx", delete=False) as tmp:
+        tmp_path = tmp.name
+    try:
+        fill_hwpx_template(REPORT_TEMPLATE_PATH, tmp_path, fields)
+        with open(tmp_path, "rb") as f:
+            hwpx_bytes = f.read()
+    finally:
+        os.unlink(tmp_path)
+
+    return hwpx_bytes, bill_name
+
+
 # ── 엔드포인트 ──────────────────────────────────────────────────────
 
 @app.post("/generate")
@@ -219,6 +301,38 @@ async def generate(req: GenerateRequest):
         raise HTTPException(status_code=500, detail=errors)
     from urllib.parse import quote
     filename = quote("검토보고서.zip", encoding="utf-8")
+    return StreamingResponse(
+        zip_buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+    )
+
+
+@app.post("/generate-report")
+async def generate_report(req: ReportRequest):
+    """의안번호 목록을 받아 심사보고서(.hwpx)를 zip으로 반환."""
+    if not req.bill_numbers:
+        raise HTTPException(status_code=400, detail="의안번호를 입력하세요.")
+
+    zip_buf = io.BytesIO()
+    errors = []
+
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for bill_no in req.bill_numbers:
+            try:
+                hwpx, bill_name = process_bill_report(bill_no)
+                zf.writestr(f"{bill_no}_심사보고.hwpx", hwpx)
+            except Exception as e:
+                import traceback
+                errors.append({"bill_no": bill_no, "error": str(e), "traceback": traceback.format_exc()})
+
+    zip_buf.seek(0)
+
+    if errors:
+        raise HTTPException(status_code=500, detail=errors)
+
+    from urllib.parse import quote
+    filename = quote("심사보고서.zip", encoding="utf-8")
     return StreamingResponse(
         zip_buf,
         media_type="application/zip",
