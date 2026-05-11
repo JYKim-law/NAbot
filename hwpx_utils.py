@@ -5,9 +5,10 @@ import os
 import re
 import shutil
 import zipfile
+from copy import deepcopy
 from lxml import etree
 
-HP = "http://www.hancom.co.kr/hwpml/2012/paragraph"
+HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 _HP = f"{{{HP}}}"
 
 def _para_text(para_el):
@@ -74,6 +75,38 @@ def _replace_in_paragraph(para_el, placeholder, value):
     return replaced
 
 
+def _replace_multiline(root, placeholder, value):
+    """
+    줄바꿈(\r\n)이 있는 값: 플레이스홀더가 있는 단락을 줄 수만큼 복제하여 삽입.
+    각 복제 단락은 원본 단락의 서식을 그대로 유지하고 해당 줄 텍스트만 채움.
+    """
+    lines = value.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    while lines and not lines[-1]:
+        lines.pop()
+    if not lines:
+        lines = ['']
+
+    for para in root.iter(f"{_HP}p"):
+        if placeholder not in _para_text(para):
+            continue
+
+        parent = para.getparent()
+        idx = list(parent).index(para)
+
+        # 원본 단락: 첫 번째 줄로 치환
+        _replace_in_paragraph(para, placeholder, lines[0])
+
+        # 나머지 줄: 단락 복제 후 삽입
+        for i, line in enumerate(lines[1:], 1):
+            new_para = deepcopy(para)
+            t_els = list(new_para.iter(f"{_HP}t"))
+            for j, t_el in enumerate(t_els):
+                t_el.text = line if j == 0 else ""
+            parent.insert(idx + i, new_para)
+
+        break
+
+
 def fill_hwpx_template(template_path: str, output_path: str, fields: dict) -> None:
     """
     hwpx 템플릿의 {{플레이스홀더}}를 fields 딕셔너리 값으로 치환하여 저장.
@@ -93,6 +126,11 @@ def fill_hwpx_template(template_path: str, output_path: str, fields: dict) -> No
         root = etree.fromstring(xml_bytes)
 
         for placeholder, value in fields.items():
+            # 줄바꿈 포함: 단락 복제 방식으로 처리
+            if '\n' in value or '\r' in value:
+                _replace_multiline(root, placeholder, value)
+                continue
+
             # 1차: 빠른 문자열 치환 (단일 run)
             xml_str = etree.tostring(root, encoding="unicode")
             if placeholder in xml_str:
