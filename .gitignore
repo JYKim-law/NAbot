@@ -1,5 +1,10 @@
-# ºôµå »êÃâ¹° 
-build/ 
-dist/ 
-.ipynb_checkpoints/ 
-(¼öÁ¤ÇÏÁö¸¶½Ã¿À)Àç·áÆÄÀÏ.hwp 
+# ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½â¹°
+build/
+dist/
+.ipynb_checkpoints/
+(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.hwp
+__pycache__/
+logs/
+ngrok.exe
+start.bat
+usage.db

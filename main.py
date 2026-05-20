@@ -3,12 +3,13 @@ import datetime
 import io
 import os
 import re
+import sqlite3
 import tempfile
 import zipfile
 
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -16,6 +17,39 @@ from pydantic import BaseModel
 from hwpx_utils import fill_hwpx_template
 
 app = FastAPI(title="국회bot API")
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "usage.db")
+
+
+def _init_db():
+    with sqlite3.connect(DB_PATH) as con:
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS usage_log (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts       TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                ip       TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                bill_cnt INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+
+
+_init_db()
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("X-Forwarded-For")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host
+
+
+def _log_usage(ip: str, endpoint: str, bill_cnt: int):
+    with sqlite3.connect(DB_PATH) as con:
+        con.execute(
+            "INSERT INTO usage_log (ip, endpoint, bill_cnt) VALUES (?, ?, ?)",
+            (ip, endpoint, bill_cnt),
+        )
 
 app.add_middleware(
     CORSMiddleware,
@@ -268,7 +302,7 @@ def process_bill_report(bill_number: str) -> tuple[bytes, str]:
 # ── 엔드포인트 ──────────────────────────────────────────────────────
 
 @app.post("/generate")
-async def generate(req: GenerateRequest):
+async def generate(req: GenerateRequest, request: Request):
     """
     의안번호 목록을 받아 검토보고서(.hwpx) + 의안원문(.hwp)을 zip으로 반환.
     """
@@ -299,6 +333,7 @@ async def generate(req: GenerateRequest):
         raise HTTPException(status_code=500, detail=errors)
     from urllib.parse import quote
     filename = quote("검토보고서.zip", encoding="utf-8")
+    _log_usage(_client_ip(request), "review", len(req.bill_numbers))
     return StreamingResponse(
         zip_buf,
         media_type="application/zip",
@@ -307,7 +342,7 @@ async def generate(req: GenerateRequest):
 
 
 @app.post("/generate-report")
-async def generate_report(req: ReportRequest):
+async def generate_report(req: ReportRequest, request: Request):
     """의안번호 목록을 받아 심사보고서(.hwpx)를 zip으로 반환."""
     if not req.bill_numbers:
         raise HTTPException(status_code=400, detail="의안번호를 입력하세요.")
@@ -331,11 +366,57 @@ async def generate_report(req: ReportRequest):
 
     from urllib.parse import quote
     filename = quote("심사보고서.zip", encoding="utf-8")
+    _log_usage(_client_ip(request), "examination", len(req.bill_numbers))
     return StreamingResponse(
         zip_buf,
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
     )
+
+
+@app.get("/stats")
+async def stats():
+    with sqlite3.connect(DB_PATH) as con:
+        cumulative = {
+            "unique_users": con.execute("SELECT COUNT(DISTINCT ip) FROM usage_log").fetchone()[0],
+            "review_count": con.execute("SELECT COALESCE(SUM(bill_cnt), 0) FROM usage_log WHERE endpoint='review'").fetchone()[0],
+            "examination_count": con.execute("SELECT COALESCE(SUM(bill_cnt), 0) FROM usage_log WHERE endpoint='examination'").fetchone()[0],
+        }
+        cumulative["total_count"] = cumulative["review_count"] + cumulative["examination_count"]
+
+        monthly_rows = con.execute("""
+            SELECT strftime('%Y-%m', ts) AS month,
+                   COUNT(DISTINCT ip)            AS unique_users,
+                   SUM(CASE WHEN endpoint='review' THEN bill_cnt ELSE 0 END)      AS review,
+                   SUM(CASE WHEN endpoint='examination' THEN bill_cnt ELSE 0 END) AS examination
+            FROM usage_log
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 12
+        """).fetchall()
+
+        daily_rows = con.execute("""
+            SELECT strftime('%Y-%m-%d', ts) AS date,
+                   COUNT(DISTINCT ip)            AS unique_users,
+                   SUM(CASE WHEN endpoint='review' THEN bill_cnt ELSE 0 END)      AS review,
+                   SUM(CASE WHEN endpoint='examination' THEN bill_cnt ELSE 0 END) AS examination
+            FROM usage_log
+            GROUP BY date
+            ORDER BY date DESC
+            LIMIT 30
+        """).fetchall()
+
+    return {
+        "cumulative": cumulative,
+        "monthly": [
+            {"month": r[0], "unique_users": r[1], "review": r[2], "examination": r[3]}
+            for r in monthly_rows
+        ],
+        "daily": [
+            {"date": r[0], "unique_users": r[1], "review": r[2], "examination": r[3]}
+            for r in daily_rows
+        ],
+    }
 
 
 @app.get("/health")

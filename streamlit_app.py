@@ -49,7 +49,7 @@ def collect_numbers(raw_text, uploaded) -> list[str]:
 with open(os.path.join(os.path.dirname(__file__), "의안번호입력시트.xlsx"), "rb") as _f:
     _sample_xlsx = _f.read()
 
-tab1, tab2 = st.tabs(["검토보고서", "심사보고서"])
+tab1, tab2, tab3 = st.tabs(["검토보고서", "심사보고서", "이용 통계"])
 
 # ── 검토보고서 탭 ──────────────────────────────────────────────────
 with tab1:
@@ -193,6 +193,56 @@ with tab2:
             mime="application/zip",
             use_container_width=True,
         )
+
+with tab3:
+    st.subheader("누적 이용 통계 (since 2026.5.20.)")
+    try:
+        data = requests.get(API_URL + "/stats", timeout=5).json()
+    except Exception:
+        st.error("서버에서 통계를 불러올 수 없습니다.")
+        st.stop()
+
+    cum = data["cumulative"]
+
+    def _stat_card(label, sublabel, value):
+        return f"""
+        <div style="text-align:center; padding:1.2rem 0.6rem;
+                    background:#f8f9fa; border-radius:10px; border:1px solid #e9ecef;">
+            <div style="font-size:0.95rem; font-weight:600; color:#333;">{label}</div>
+            <div style="font-size:0.75rem; color:#999; margin-top:0.15rem;">{sublabel}</div>
+            <div style="font-size:2rem; font-weight:700; color:#1a1a2e;
+                        margin-top:0.5rem; letter-spacing:-1px;">{value}</div>
+        </div>
+        """
+
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(_stat_card("이용자 수", "IP 기준", f"{cum['unique_users']:,} 명"), unsafe_allow_html=True)
+    c2.markdown(_stat_card("검토보고서 생성", "의안번호 입력 수 기준", f"{cum['review_count']:,} 건"), unsafe_allow_html=True)
+    c3.markdown(_stat_card("심사보고서 생성", "의안번호 입력 수 기준", f"{cum['examination_count']:,} 건"), unsafe_allow_html=True)
+
+    st.divider()
+
+    import pandas as pd
+
+    st.markdown("**월별 이용 현황**")
+    if data["monthly"]:
+        monthly_df = pd.DataFrame(data["monthly"]).rename(columns={
+            "month": "월", "unique_users": "이용자 수", "review": "검토보고서", "examination": "심사보고서"
+        })
+        st.dataframe(monthly_df, hide_index=True, use_container_width=True)
+    else:
+        st.caption("아직 데이터가 없습니다.")
+
+    st.divider()
+
+    st.markdown("**일별 이용 현황 (최근 30일)**")
+    if data["daily"]:
+        daily_df = pd.DataFrame(data["daily"]).rename(columns={
+            "date": "날짜", "unique_users": "이용자 수", "review": "검토보고서", "examination": "심사보고서"
+        })
+        st.dataframe(daily_df, hide_index=True, use_container_width=True)
+    else:
+        st.caption("아직 데이터가 없습니다.")
 
 st.divider()
 st.caption("오류·고장: suitbread@gmail.com")
