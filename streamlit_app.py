@@ -14,6 +14,18 @@ st.markdown(
 
 API_URL = "http://localhost:8000"
 
+
+def _get_client_ip() -> str:
+    """Tailscale Funnel 등 프록시 환경에서 실제 클라이언트 IP를 반환."""
+    try:
+        h = st.context.headers
+        fwd = h.get("X-Forwarded-For") or h.get("X-Real-Ip") or ""
+        if fwd:
+            return fwd.split(",")[0].strip()
+    except Exception:
+        pass
+    return "unknown"
+
 if "zip_bytes" not in st.session_state:
     st.session_state.zip_bytes = None
 if "report_zip_bytes" not in st.session_state:
@@ -109,6 +121,7 @@ with tab1:
                                 "tel_ext": tel_ext or "0000",
                             },
                         },
+                        headers={"X-Forwarded-For": _get_client_ip()},
                         timeout=300,
                     )
                     resp.raise_for_status()
@@ -170,6 +183,7 @@ with tab2:
                     resp = requests.post(
                         API_URL + "/generate-report",
                         json={"bill_numbers": bill_numbers},
+                        headers={"X-Forwarded-For": _get_client_ip()},
                         timeout=300,
                     )
                     resp.raise_for_status()
