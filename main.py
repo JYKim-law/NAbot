@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from hwp_daebipyo import extract_daebipyo
 from hwpx_utils import fill_hwpx_template
 
 app = FastAPI(title="국회bot API")
@@ -204,14 +205,21 @@ def process_bill(bill_number: str, opts: Options) -> tuple[bytes, bytes | None, 
         "{{라. 제목}}":      proposal["ra_title"],
         "{{라. 내용}}":      proposal["ra_content"],
         "{{내선번호}}":      opts.tel_ext,
-        # {{대비표}}는 값 없으면 cleanup 단계에서 자동 제거
     }
 
-    # ── 4. 템플릿 채우기 ───────────────────────────────────────────
+    # ── 4. 신구조문대비표 추출 (일부개정안만) ──────────────────────────
+    daebipyo = None
+    if hwp_bytes and "일부개정" in bill_name:
+        try:
+            daebipyo = extract_daebipyo(hwp_bytes)
+        except Exception:
+            pass  # 추출 실패해도 나머지 보고서는 생성
+
+    # ── 5. 템플릿 채우기 ───────────────────────────────────────────
     with tempfile.NamedTemporaryFile(suffix=".hwpx", delete=False) as tmp:
         tmp_path = tmp.name
     try:
-        fill_hwpx_template(TEMPLATE_PATH, tmp_path, fields)
+        fill_hwpx_template(TEMPLATE_PATH, tmp_path, fields, daebipyo=daebipyo)
         with open(tmp_path, "rb") as f:
             hwpx_bytes = f.read()
     finally:
