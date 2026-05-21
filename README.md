@@ -15,7 +15,7 @@
 - 의안번호 직접 입력 또는 엑셀 파일 업로드 (여러 건 동시 처리)
 - 회기·위원회·담당자 옵션 입력
 - 검토보고서(hwpx) + 의안원문(hwp) → ZIP 파일로 일괄 다운로드
-- 단, 신구조문대비표는 ZIP 내 의안원문에서 수동 복사·붙여넣기 필요
+- 일부개정법률안은 신구조문대비표를 의안원문에서 자동 추출하여 검토보고서에 삽입
 
 **심사보고서 탭**
 - 의안번호만 입력하면 자동 생성 (옵션 입력 불필요)
@@ -27,7 +27,7 @@
 Python 3.10+ 및 아래 패키지 필요:
 
 ```bash
-pip install fastapi uvicorn requests beautifulsoup4 lxml streamlit openpyxl
+pip install fastapi uvicorn requests beautifulsoup4 lxml streamlit openpyxl pyhwp
 ```
 
 ## API 키 발급
@@ -64,6 +64,7 @@ streamlit run streamlit_app.py
 main.py                       FastAPI 백엔드 (의안 정보 수집 + hwpx 생성)
 streamlit_app.py              Streamlit 프론트엔드 (검토보고서 / 심사보고서 탭)
 hwpx_utils.py                 hwpx 템플릿 플레이스홀더 치환 유틸리티
+hwp_daebipyo.py               HWP 의안원문에서 신구조문대비표 추출 (pyhwp 기반)
 재료파일_검토보고서.hwpx       검토보고서 hwpx 템플릿
 재료파일_심사보고서.hwpx       심사보고서 hwpx 템플릿
 의안번호입력시트.xlsx          엑셀 입력 예시 파일
@@ -73,5 +74,5 @@ legacy/                       구버전 데스크탑 EXE 소스 (참고용)
 ## 주의사항
 
 - 템플릿 hwpx 파일(`재료파일_*.hwpx`)을 수정하면 출력물이 깨질 수 있다.
-- 신구조문대비표는 `.hwp` OLE 바이너리 한계로 자동 삽입 불가. ZIP에 포함된 의안원문에서 수동 복사·붙여넣기 필요.
+- 신구조문대비표 자동 삽입은 일부개정법률안에만 적용된다. 제정안·전부개정안은 대비표가 없으므로 해당 란이 공란으로 출력된다.
 - 열린국회정보 API 키는 환경변수 `ASSEMBLY_API_KEY`로 주입해야 한다. 위 설정 참고.
