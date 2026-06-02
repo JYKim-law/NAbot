@@ -8,3 +8,4 @@ logs/
 ngrok.exe
 start.bat
 usage.db
+nssm.exe
